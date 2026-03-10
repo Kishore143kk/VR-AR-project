@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CitizenLens — AR Urban Planning</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root {
+  --bg: #07100a;
+  --surface: #0e1a11;
+  --surface2: #142018;
+  --green: #00e87a;
+  --green-dim: #00e87a18;
+  --green-glow: #00e87a44;
+  --amber: #ffc233;
+  --red: #ff4d6d;
+  --blue: #4dafff;
+  --text: #dff2e8;
+  --text-dim: #6b8f78;
+  --border: #1a2e1f;
+  --border-bright: #243d2a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ===== SCREENS ===== */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 10;
+}
+.screen.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* ===== LANDING ===== */
+#screen-landing {
+  background: var(--bg);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.5;
+}
+
+.landing-glow {
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(ellipse, #00e87a14 0%, transparent 65%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  pointer-events: none;
+}
+
+.landing-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 40px;
+}
+
+.landing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--green);
+  background: var(--green-dim);
+  color: var(--green);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  margin-bottom: 32px;
+  border-radius: 2px;
+}
+
+.pulse-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.3; transform:scale(0.7); }
+}
+
+.landing-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(56px, 10vw, 100px);
+  font-weight: 800;
+  letter-spacing: -4px;
+  line-height: 0.9;
+  margin-bottom: 12px;
+}
+
+.landing-title span {
+  color: var(--green);
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+}
+
+.landing-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-width: 420px;
+  margin: 20px auto 48px;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: var(--bg);
+  border: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 16px 40px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+.btn-primary:hover {
+  background: #00ff88;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px var(--green-glow);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border-bright);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 12px 28px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 12px;
+}
+.btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+.landing-stats {
+  display: flex;
+  gap: 48px;
+  justify-content: center;
+  margin-top: 64px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+
+.stat { text-align: center; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--green);
+}
+.stat-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; margin-top: 4px; }
+
+/* Buildings animation */
+.city-silhouette {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 200px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 20px;
+  opacity: 0.15;
+}
+
+.building-sil {
+  background: var(--green);
+  border-radius: 2px 2px 0 0;
+  animation: buildUp 0.8s ease forwards;
+  transform-origin: bottom;
+  transform: scaleY(0);
+}
+
+@keyframes buildUp {
+  to { transform: scaleY(1); }
+}
+
+/* ===== MAP SCREEN ===== */
+#screen-map {
+  background: var(--bg);
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-bright);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.topbar-logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -0.5px;
+}
+
+.topbar-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  flex: 1;
+}
+
+.icon-btn {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border-bright);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+.icon-btn:hover { border-color: var(--green); color: var(--green); }
+
+/* Fake Map */
+.map-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #0a1a0f;
+}
+
+.map-canvas {
+  width: 100%; height: 100%;
+  position: relative;
+}
+
+/* SVG Map grid */
+.map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+}
+
+.project-pin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.2s;
+}
+.project-pin:hover { transform: translate(-50%, -100%) scale(1.15); }
+
+.pin-body {
+  background: var(--green);
+  color: var(--bg);
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 10px;
+  white-space: nowrap;
+  position: relative;
+  border-radius: 3px;
+  box-shadow: 0 4px 20px var(--green-glow);
+}
+
+.pin-body::after {
+  content: '';
+  position: absolute;
+  bottom: -6px; left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--green);
+  border-bottom: none;
+}
+
+.pin-body.amber { background: var(--amber); box-shadow: 0 4px 20px #ffc23344; }
+.pin-body.amber::after { border-top-color: var(--amber); }
+.pin-body.red { background: var(--red); box-shadow: 0 4px 20px #ff4d6d44; }
+.pin-body.red::after { border-top-color: var(--red); }
+
+.map-legend {
+  position: absolute;
+  bottom: 20px; left: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  padding: 16px;
+  z-index: 30;
+  min-width: 180px;
+}
+
+.legend-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; margin-bottom: 6px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.map-zoom {
+  position: absolute;
+  bottom: 20px; right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 30;
+}
+
+.zoom-btn {
+  width: 36px; height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  color: var(--text);
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.zoom-btn:hover { border-color: var(--green); color: var(--green); }
+
+/* Project Panel (slides up) */
+.project-panel {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border-bright);
+  padding: 24px;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index: 50;
+}
+.project-panel.open { transform: translateY(0); }
+
+.panel-handle {
+  width: 40px; height: 3px;
+  background: var(--border-bright);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+
+.panel-tag { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+.panel-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.panel-desc { font-size: 11px; color: var(--text-dim); line-height: 1.7; margin-bottom: 16px; }
+
+.panel-meta {
+  display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.pmeta { font-size: 10px; }
+.pmeta-l { color: var(--text-dim); display: block; margin-bottom: 2px; }
+.pmeta-v { color: var(--green); font-weight: 500; }
+
+.panel-actions { display: flex; gap: 8px; }
+
+/* ===== AR SCREEN ===== */
+#screen-ar {
+  background: #000;
+  position: relative;
+}
+
+#ar-canvas {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.ar-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Corner brackets */
+.ar-corner {
+  position: absolute;
+  width: 40px; height: 40px;
+  border-color: var(--green);
+  border-style: solid;
+  opacity: 0.7;
+}
+.ar-corner.tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+.ar-corner.tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+.ar-corner.bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+.ar-corner.br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+
+.ar-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+  pointer-events: all;
+  z-index: 30;
+}
+
+.ar-back {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ar-back:hover { border-color: var(--green); color: var(--green); }
+
+.ar-project-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  flex: 1;
+}
+
+.ar-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: rgba(255,255,255,0.6);
+  letter-spacing: 0.1em;
+}
+.ar-status-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+/* AR Controls bottom */
+.ar-controls {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  pointer-events: all;
+  z-index: 30;
+}
+
+.shadow-slider-wrap {
+  margin-bottom: 20px;
+}
+.slider-label {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.time-display {
+  color: var(--green);
+  font-weight: 500;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  outline: none;
+  border-radius: 2px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  background: var(--green);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--green-glow);
+}
+
+.ar-action-row {
+  display: flex; gap: 8px;
+}
+
+.ar-btn {
+  flex: 1;
+  padding: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.5);
+  color: white;
+  transition: all 0.2s;
+  text-align: center;
+}
+.ar-btn:hover { border-color: var(--green); color: var(--green); }
+.ar-btn.active-btn { background: var(--green); color: var(--bg); border-color: var(--green); font-weight: 700; }
+
+/* Info overlay in AR */
+.ar-info-tag {
+  position: absolute;
+  background: rgba(0,0,0,0.75);
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-size: 10px;
+  padding: 6px 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+.ar-info-tag::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 100%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--green);
+}
+
+/* ===== VOTE SCREEN ===== */
+#screen-vote {
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.vote-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-bright);
+  padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+  flex-shrink: 0;
+}
+
+.vote-content { padding: 24px; flex: 1; }
+
+.vote-project-card {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.vpc-tag { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+.vpc-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.vpc-desc { font-size: 11px; color: var(--text-dim); line-height: 1.7; }
+
+.vote-section-label {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.vote-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-bright); }
+
+.vote-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+.vote-option {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.vote-option::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  transition: width 0.3s;
+}
+.vote-option:hover { border-color: var(--border-bright); }
+.vote-option.selected-support { border-color: var(--green); }
+.vote-option.selected-support::before { width: 3px; background: var(--green); }
+.vote-option.selected-object { border-color: var(--red); }
+.vote-option.selected-object::before { width: 3px; background: var(--red); }
+.vote-option.selected-suggest { border-color: var(--amber); }
+.vote-option.selected-suggest::before { width: 3px; background: var(--amber); }
+
+.vote-icon { font-size: 22px; flex-shrink: 0; width: 32px; text-align: center; }
+.vote-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+.vote-sublabel { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.vote-count { margin-left: auto; font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: var(--text-dim); }
+
+.comment-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+.comment-area:focus-within { border-color: var(--border-bright); }
+
+textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  padding: 12px;
+  resize: none;
+  outline: none;
+  line-height: 1.7;
+  min-height: 80px;
+}
+textarea::placeholder { color: var(--text-dim); }
+
+.submit-btn {
+  width: 100%;
+  background: var(--green);
+  color: var(--bg);
+  border: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 24px;
+}
+.submit-btn:hover { background: #00ff88; box-shadow: 0 4px 20px var(--green-glow); }
+.submit-btn:disabled { background: var(--border-bright); color: var(--text-dim); cursor: not-allowed; }
+
+/* Live votes bar */
+.votes-bar-wrap { margin-bottom: 8px; }
+.votes-bar-label {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--text-dim); margin-bottom: 4px;
+}
+.votes-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.votes-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.fill-green { background: var(--green); }
+.fill-red { background: var(--red); }
+.fill-amber { background: var(--amber); }
+
+/* ===== DASHBOARD SCREEN ===== */
+#screen-dashboard {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.dash-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-bright);
+  padding: 16px 20px;
+  display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+}
+
+.dash-content { padding: 20px; }
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dash-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px;
+}
+.ds-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+.ds-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+.ds-value.green { color: var(--green); }
+.ds-value.red { color: var(--red); }
+.ds-value.amber { color: var(--amber); }
+.ds-sub { font-size: 9px; color: var(--text-dim); margin-top: 4px; }
+
+.section-label {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-bright); }
+
+.project-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  display: flex; align-items: center; gap: 12px;
+}
+.project-row:hover { border-color: var(--border-bright); }
+.pr-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; flex: 1; }
+.pr-meta { font-size: 10px; color: var(--text-dim); }
+.pr-bar {
+  display: flex; height: 4px; width: 80px; border-radius: 2px; overflow: hidden; gap: 1px;
+}
+
+.ai-insight {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  padding: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.ai-label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--green);
+  margin-bottom: 12px;
+}
+
+.ai-thinking {
+  display: flex; gap: 4px; align-items: center;
+}
+.ai-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: thinkDot 1.2s infinite;
+}
+.ai-dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes thinkDot {
+  0%,80%,100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.ai-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.8;
+  display: none;
+}
+
+.ai-text.visible { display: block; }
+
+.comment-feed { display: flex; flex-direction: column; gap: 6px; }
+.comment-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.ci-vote { font-size: 14px; flex-shrink: 0; }
+.ci-text { font-size: 11px; color: var(--text-dim); line-height: 1.6; }
+.ci-meta { font-size: 9px; color: #3d5e48; margin-top: 3px; }
+
+/* ===== NAV BAR ===== */
+.navbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border-bright);
+  display: flex;
+  z-index: 200;
+}
+
+.nav-item {
+  flex: 1;
+  padding: 12px 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+.nav-item:hover { color: var(--text); }
+.nav-item.active { color: var(--green); }
+.nav-icon { font-size: 20px; }
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  top: 80px; left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--green);
+  color: var(--bg);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 12px 24px;
+  z-index: 999;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+
+/* Typewriter */
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+.typewriter-cursor { animation: blink 1s infinite; color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== LANDING SCREEN ===== -->
+<div class="screen active" id="screen-landing">
+  <div class="landing-grid"></div>
+  <div class="landing-glow"></div>
+
+  <div class="city-silhouette" id="citySil"></div>
+
+  <div class="landing-content fade-in">
+    <div class="landing-badge"><span class="pulse-dot"></span> Applied AI × XR Hackathon</div>
+    <div class="landing-title">Citizen<span>Lens</span></div>
+    <p class="landing-sub">Point your phone at any empty plot and see the proposed building — life-size, in the real world, before a single brick is laid.</p>
+    <div>
+      <button class="btn-primary" onclick="goTo('map')">Explore City Projects</button>
+      <button class="btn-secondary" onclick="goTo('dashboard')">Admin Dashboard</button>
+    </div>
+    <div class="landing-stats">
+      <div class="stat">
+        <div class="stat-num" id="cnt-projects">3</div>
+        <div class="stat-label">Active Projects</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="cnt-votes">247</div>
+        <div class="stat-label">Citizen Votes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="cnt-zones">12</div>
+        <div class="stat-label">Planning Zones</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAP SCREEN ===== -->
+<div class="screen" id="screen-map">
+  <div class="topbar">
+    <div class="topbar-logo">CitizenLens</div>
+    <div class="topbar-title">Select a project to visualize in AR</div>
+    <div class="icon-btn" onclick="goTo('dashboard')">📊</div>
+  </div>
+
+  <div class="map-container">
+    <svg class="map-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+      <!-- Roads -->
+      <rect width="800" height="600" fill="#0a1a0f"/>
+      <!-- Major roads -->
+      <line x1="0" y1="200" x2="800" y2="200" stroke="#1a3020" stroke-width="18"/>
+      <line x1="0" y1="400" x2="800" y2="400" stroke="#1a3020" stroke-width="18"/>
+      <line x1="200" y1="0" x2="200" y2="600" stroke="#1a3020" stroke-width="18"/>
+      <line x1="500" y1="0" x2="500" y2="600" stroke="#1a3020" stroke-width="18"/>
+      <!-- Road markings -->
+      <line x1="0" y1="200" x2="800" y2="200" stroke="#243d2a" stroke-width="1" stroke-dasharray="20,20"/>
+      <line x1="0" y1="400" x2="800" y2="400" stroke="#243d2a" stroke-width="1" stroke-dasharray="20,20"/>
+      <line x1="200" y1="0" x2="200" y2="600" stroke="#243d2a" stroke-width="1" stroke-dasharray="20,20"/>
+      <line x1="500" y1="0" x2="500" y2="600" stroke="#243d2a" stroke-width="1" stroke-dasharray="20,20"/>
+      <!-- Minor roads -->
+      <line x1="0" y1="300" x2="800" y2="300" stroke="#122018" stroke-width="8"/>
+      <line x1="350" y1="0" x2="350" y2="600" stroke="#122018" stroke-width="8"/>
+      <line x1="650" y1="0" x2="650" y2="600" stroke="#122018" stroke-width="8"/>
+      <!-- City blocks -->
+      <rect x="10" y="10" width="170" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="220" y="10" width="260" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="520" y="10" width="260" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="10" y="220" width="170" height="160" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="220" y="220" width="260" height="160" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="520" y="220" width="260" height="160" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="10" y="420" width="170" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="220" y="420" width="260" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <rect x="520" y="420" width="260" height="170" rx="2" fill="#0e1a11" stroke="#1a2e1f" stroke-width="1"/>
+      <!-- Existing buildings in blocks -->
+      <rect x="30" y="30" width="60" height="50" rx="1" fill="#142018"/>
+      <rect x="100" y="30" width="70" height="80" rx="1" fill="#142018"/>
+      <rect x="30" y="100" width="130" height="70" rx="1" fill="#142018"/>
+      <rect x="240" y="25" width="100" height="130" rx="1" fill="#142018"/>
+      <rect x="360" y="25" width="100" height="80" rx="1" fill="#142018"/>
+      <rect x="360" y="115" width="100" height="50" rx="1" fill="#142018"/>
+      <!-- Park area -->
+      <rect x="540" y="25" width="220" height="150" rx="4" fill="#0e2018" stroke="#1a3020" stroke-width="1"/>
+      <circle cx="620" cy="80" r="30" fill="#122018"/>
+      <circle cx="700" cy="100" r="20" fill="#122018"/>
+      <circle cx="650" cy="140" r="15" fill="#122018"/>
+      <text x="630" y="175" font-size="10" fill="#243d2a" text-anchor="middle" font-family="monospace">GREEN PARK</text>
+      <!-- Water feature -->
+      <ellipse cx="95" cy="300" r="60" ry="40" fill="#0a1a20" stroke="#1a2e3a" stroke-width="1"/>
+      <text x="95" y="305" font-size="8" fill="#1a3040" text-anchor="middle" font-family="monospace">LAKE</text>
+      <!-- Compass -->
+      <circle cx="750" cy="50" r="20" fill="none" stroke="#1a2e1f" stroke-width="1"/>
+      <text x="750" y="35" font-size="10" fill="#243d2a" text-anchor="middle" font-family="monospace">N</text>
+      <line x1="750" y1="38" x2="750" y2="62" stroke="#243d2a" stroke-width="1"/>
+      <polygon points="750,38 747,50 753,50" fill="#00e87a" opacity="0.5"/>
+      <!-- Scale bar -->
+      <line x1="30" y1="580" x2="130" y2="580" stroke="#243d2a" stroke-width="2"/>
+      <line x1="30" y1="575" x2="30" y2="585" stroke="#243d2a" stroke-width="1"/>
+      <line x1="130" y1="575" x2="130" y2="585" stroke="#243d2a" stroke-width="1"/>
+      <text x="80" y="595" font-size="8" fill="#3d5e48" text-anchor="middle" font-family="monospace">500m</text>
+    </svg>
+
+    <!-- Project Pins -->
+    <div class="project-pin" style="left:43%;top:35%" onclick="openPanel(0)">
+      <div class="pin-body">🏗️ Metro Tower</div>
+    </div>
+    <div class="project-pin" style="left:70%;top:55%" onclick="openPanel(1)">
+      <div class="pin-body amber">🌳 Eco Bridge</div>
+    </div>
+    <div class="project-pin" style="left:28%;top:72%" onclick="openPanel(2)">
+      <div class="pin-body red">🏘️ Housing Block C</div>
+    </div>
+
+    <!-- Legend -->
+    <div class="map-legend">
+      <div class="legend-title">Project Status</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Under Review</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--amber)"></div>Public Comment</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Disputed</div>
+    </div>
+
+    <!-- Zoom -->
+    <div class="map-zoom">
+      <div class="zoom-btn">+</div>
+      <div class="zoom-btn">−</div>
+    </div>
+
+    <!-- Project Panel -->
+    <div class="project-panel" id="project-panel">
+      <div class="panel-handle"></div>
+      <div class="panel-tag" id="pp-tag">Project</div>
+      <div class="panel-title" id="pp-title">Loading...</div>
+      <div class="panel-desc" id="pp-desc"></div>
+      <div class="panel-meta">
+        <div class="pmeta"><span class="pmeta-l">Height</span><span class="pmeta-v" id="pp-height">—</span></div>
+        <div class="pmeta"><span class="pmeta-l">Floors</span><span class="pmeta-v" id="pp-floors">—</span></div>
+        <div class="pmeta"><span class="pmeta-l">Cost</span><span class="pmeta-v" id="pp-cost">—</span></div>
+        <div class="pmeta"><span class="pmeta-l">Votes</span><span class="pmeta-v" id="pp-votes">—</span></div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn-primary" style="flex:1;padding:12px" onclick="goToAR()">🥽 View in AR</button>
+        <button class="btn-secondary" style="padding:12px 16px" onclick="goToVote()">Vote</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AR SCREEN ===== -->
+<div class="screen" id="screen-ar">
+  <canvas id="ar-canvas"></canvas>
+
+  <div class="ar-overlay">
+    <div class="ar-corner tl"></div>
+    <div class="ar-corner tr"></div>
+    <div class="ar-corner bl"></div>
+    <div class="ar-corner br"></div>
+
+    <!-- Info tags -->
+    <div class="ar-info-tag" id="height-tag" style="top:30%;left:65%">Height: 85m</div>
+    <div class="ar-info-tag" style="top:55%;left:15%">Shadow zone</div>
+  </div>
+
+  <div class="ar-topbar">
+    <button class="ar-back" onclick="goTo('map')">← Map</button>
+    <div class="ar-project-name" id="ar-project-name">Metro Tower</div>
+    <div class="ar-status"><span class="ar-status-dot"></span>AR LIVE</div>
+  </div>
+
+  <div class="ar-controls">
+    <div class="shadow-slider-wrap">
+      <div class="slider-label">
+        <span>☀️ Shadow Simulation</span>
+        <span class="time-display" id="time-display">12:00 PM</span>
+      </div>
+      <input type="range" id="timeSlider" min="6" max="20" value="12" oninput="updateShadow(this.value)">
+    </div>
+    <div class="ar-action-row">
+      <div class="ar-btn" id="btn-wireframe" onclick="toggleWireframe()">Wireframe</div>
+      <div class="ar-btn active-btn" id="btn-solid" onclick="toggleSolid()">Solid</div>
+      <div class="ar-btn" onclick="goToVote()">📝 Vote</div>
+      <div class="ar-btn" onclick="shareAR()">🔗 Share</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VOTE SCREEN ===== -->
+<div class="screen" id="screen-vote" style="padding-bottom:60px">
+  <div class="vote-header">
+    <button class="ar-back" style="background:var(--surface2);color:var(--text-dim)" onclick="goTo('ar')">← AR View</button>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px">Cast Your Vote</div>
+  </div>
+
+  <div class="vote-content">
+    <div class="vote-project-card">
+      <div class="vpc-tag">Active Project</div>
+      <div class="vpc-title" id="vote-project-title">Metro Tower</div>
+      <div class="vpc-desc" id="vote-project-desc">A 28-floor mixed-use development in the central district.</div>
+    </div>
+
+    <div class="vote-section-label">Live Sentiment</div>
+    <div style="margin-bottom:24px">
+      <div class="votes-bar-wrap">
+        <div class="votes-bar-label"><span>✅ Support</span><span id="pct-support">58%</span></div>
+        <div class="votes-bar-track"><div class="votes-bar-fill fill-green" id="bar-support" style="width:58%"></div></div>
+      </div>
+      <div class="votes-bar-wrap">
+        <div class="votes-bar-label"><span>❌ Object</span><span id="pct-object">28%</span></div>
+        <div class="votes-bar-track"><div class="votes-bar-fill fill-red" id="bar-object" style="width:28%"></div></div>
+      </div>
+      <div class="votes-bar-wrap">
+        <div class="votes-bar-label"><span>💡 Suggest Change</span><span id="pct-suggest">14%</span></div>
+        <div class="votes-bar-track"><div class="votes-bar-fill fill-amber" id="bar-suggest" style="width:14%"></div></div>
+      </div>
+    </div>
+
+    <div class="vote-section-label">Your Vote</div>
+    <div class="vote-options">
+      <div class="vote-option" id="opt-support" onclick="selectVote('support')">
+        <div class="vote-icon">✅</div>
+        <div>
+          <div class="vote-label">Support</div>
+          <div class="vote-sublabel">I'm in favour of this project</div>
+        </div>
+        <div class="vote-count" id="vc-support">143</div>
+      </div>
+      <div class="vote-option" id="opt-object" onclick="selectVote('object')">
+        <div class="vote-icon">❌</div>
+        <div>
+          <div class="vote-label">Object</div>
+          <div class="vote-sublabel">I oppose this development</div>
+        </div>
+        <div class="vote-count" id="vc-object">69</div>
+      </div>
+      <div class="vote-option" id="opt-suggest" onclick="selectVote('suggest')">
+        <div class="vote-icon">💡</div>
+        <div>
+          <div class="vote-label">Suggest Change</div>
+          <div class="vote-sublabel">I'd support it with modifications</div>
+        </div>
+        <div class="vote-count" id="vc-suggest">35</div>
+      </div>
+    </div>
+
+    <div class="vote-section-label">Your Comment</div>
+    <div class="comment-area">
+      <textarea id="vote-comment" placeholder="Share your thoughts about this project... (optional)" rows="3"></textarea>
+    </div>
+
+    <button class="submit-btn" id="submit-vote-btn" onclick="submitVote()" disabled>Select a vote option first</button>
+
+    <div class="vote-section-label">Recent Comments</div>
+    <div class="comment-feed" id="comment-feed">
+      <div class="comment-item">
+        <div class="ci-vote">✅</div>
+        <div>
+          <div class="ci-text">Great to see mixed-use development in the central district. Hoping for affordable units.</div>
+          <div class="ci-meta">Zone A resident · 2h ago</div>
+        </div>
+      </div>
+      <div class="comment-item">
+        <div class="ci-vote">❌</div>
+        <div>
+          <div class="ci-text">The shadow impact on Green Park is unacceptable. The park will be in shade by 2PM every day.</div>
+          <div class="ci-meta">Park District · 3h ago</div>
+        </div>
+      </div>
+      <div class="comment-item">
+        <div class="ci-vote">💡</div>
+        <div>
+          <div class="ci-text">Reduce to 18 floors and include a public rooftop garden — then I'd support it.</div>
+          <div class="ci-meta">Central resident · 5h ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD SCREEN ===== -->
+<div class="screen" id="screen-dashboard" style="padding-bottom:60px">
+  <div class="dash-header">
+    <button class="ar-back" style="background:var(--surface2);color:var(--text-dim)" onclick="goTo('landing')">← Home</button>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;flex:1">Planning Dashboard</div>
+    <div class="icon-btn">⚙️</div>
+  </div>
+
+  <div class="dash-content">
+    <div class="dash-grid">
+      <div class="dash-stat">
+        <div class="ds-label">Total Votes</div>
+        <div class="ds-value green" id="dash-total">247</div>
+        <div class="ds-sub">↑ 12 today</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-label">Support Rate</div>
+        <div class="ds-value green">58%</div>
+        <div class="ds-sub">across all projects</div>
+      </div>
+      <div class="dash-stat">
+        <div class="ds-label">Disputed</div>
+        <div class="ds-value red">1</div>
+        <div class="ds-sub">project flagged</div>
+      </div>
+    </div>
+
+    <div class="section-label">AI Planning Insight</div>
+    <div class="ai-insight">
+      <div class="ai-label">
+        🤖 Claude AI Analysis
+        <div class="ai-thinking" id="ai-thinking">
+          <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+        </div>
+      </div>
+      <div class="ai-text" id="ai-text"></div>
+    </div>
+
+    <div class="section-label">Active Projects</div>
+    <div id="projects-list">
+      <div class="project-row" onclick="selectDashProject(0)">
+        <div>
+          <div class="pr-name">Metro Tower</div>
+          <div class="pr-meta">Central District · 247 votes</div>
+        </div>
+        <div class="pr-bar">
+          <div style="background:var(--green);width:58%;"></div>
+          <div style="background:var(--red);width:28%;"></div>
+          <div style="background:var(--amber);width:14%;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--green);margin-left:8px">58%</div>
+      </div>
+      <div class="project-row" onclick="selectDashProject(1)">
+        <div>
+          <div class="pr-name">Eco Bridge</div>
+          <div class="pr-meta">River Zone · 89 votes</div>
+        </div>
+        <div class="pr-bar">
+          <div style="background:var(--green);width:72%;"></div>
+          <div style="background:var(--red);width:10%;"></div>
+          <div style="background:var(--amber);width:18%;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--green);margin-left:8px">72%</div>
+      </div>
+      <div class="project-row" onclick="selectDashProject(2)">
+        <div>
+          <div class="pr-name">Housing Block C</div>
+          <div class="pr-meta">South Zone · 134 votes</div>
+        </div>
+        <div class="pr-bar">
+          <div style="background:var(--green);width:31%;"></div>
+          <div style="background:var(--red);width:52%;"></div>
+          <div style="background:var(--amber);width:17%;"></div>
+        </div>
+        <div style="font-size:10px;color:var(--red);margin-left:8px">31%</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:20px">Recent Citizen Comments</div>
+    <div class="comment-feed">
+      <div class="comment-item">
+        <div class="ci-vote">✅</div>
+        <div>
+          <div class="ci-text">The Eco Bridge will massively improve east-west pedestrian connectivity.</div>
+          <div class="ci-meta">Eco Bridge · River Zone · 1h ago</div>
+        </div>
+      </div>
+      <div class="comment-item">
+        <div class="ci-vote">❌</div>
+        <div>
+          <div class="ci-text">Housing Block C will destroy the only green corridor in the south. No more trees, no more wildlife.</div>
+          <div class="ci-meta">Housing Block C · South Zone · 2h ago</div>
+        </div>
+      </div>
+      <div class="comment-item">
+        <div class="ci-vote">💡</div>
+        <div>
+          <div class="ci-text">Metro Tower needs setbacks at floors 10 and 20 to reduce street canyon effect.</div>
+          <div class="ci-meta">Metro Tower · Central District · 4h ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar" style="display:none">
+  <button class="nav-item" id="nav-map" onclick="goTo('map')">
+    <span class="nav-icon">🗺️</span>Map
+  </button>
+  <button class="nav-item" id="nav-ar" onclick="goTo('ar')">
+    <span class="nav-icon">🥽</span>AR View
+  </button>
+  <button class="nav-item" id="nav-vote" onclick="goTo('vote')">
+    <span class="nav-icon">📝</span>Vote
+  </button>
+  <button class="nav-item" id="nav-dashboard" onclick="goTo('dashboard')">
+    <span class="nav-icon">📊</span>Dashboard
+  </button>
+</nav>
+
+<script>
+// ===== DATA =====
+const projects = [
+  {
+    id: 0,
+    name: "Metro Tower",
+    tag: "Mixed-Use Development",
+    desc: "A 28-floor mixed-use development proposed for the central business district, featuring retail on floors 1–3, offices 4–20, and residential units 21–28.",
+    height: "85m", floors: "28", cost: "₹420 Cr",
+    votes: 247, support: 143, object: 69, suggest: 35,
+    color: 0x00e87a,
+    status: "Under Review"
+  },
+  {
+    id: 1,
+    name: "Eco Bridge",
+    tag: "Green Infrastructure",
+    desc: "A pedestrian eco-bridge spanning 200m over the river, with native plantings, cycle paths, and integrated solar panels for public lighting.",
+    height: "12m", floors: "1 span", cost: "₹85 Cr",
+    votes: 89, support: 64, object: 9, suggest: 16,
+    color: 0xffc233,
+    status: "Public Comment"
+  },
+  {
+    id: 2,
+    name: "Housing Block C",
+    tag: "Affordable Housing",
+    desc: "320 affordable housing units across 4 blocks in the south zone. Proposed on the current green corridor, displacing 2.4 hectares of urban woodland.",
+    height: "24m", floors: "8", cost: "₹210 Cr",
+    votes: 134, support: 42, object: 70, suggest: 22,
+    color: 0xff4d6d,
+    status: "Disputed"
+  }
+];
+
+let currentProject = 0;
+let currentScreen = 'landing';
+let selectedVote = null;
+let voteSubmitted = false;
+let arRenderer, arScene, arCamera, arBuilding, arAnimId;
+let isWireframe = false;
+const aiInsights = [
+  "Analysing 247 citizen votes across 3 active projects...\n\n📍 Metro Tower: Strong overall support (58%), but residents within 200m of Green Park show 71% opposition citing shadow impact. Recommend reviewing height above floor 22 or adjusting orientation by 15° NE.\n\n📍 Housing Block C is the most contested project. 52% opposition centres on biodiversity loss. Citizens suggest relocating to the brownfield site on Block F as an alternative.\n\n📍 Eco Bridge enjoys broad cross-community support at 72%. Fast-track public comment period recommended.",
+  "Eco Bridge feedback summary: Citizens broadly support the connectivity improvement. Top suggestions include adding a café kiosk at midpoint (mentioned by 23% of commenters) and ensuring accessibility ramps meet full wheelchair standards.",
+  "Housing Block C alert: Opposition is geographically clustered in the immediate 300m radius. Residents further away are broadly supportive. Consider a design revision that preserves the northern tree line — this may shift sentiment significantly."
+];
+
+// ===== NAVIGATION =====
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + screen);
+  el.classList.add('active');
+  currentScreen = screen;
+
+  // Navbar visibility
+  const navbar = document.getElementById('navbar');
+  navbar.style.display = (screen === 'landing') ? 'none' : 'flex';
+
+  // Update nav active state
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + screen);
+  if (navEl) navEl.classList.add('active');
+
+  // Screen-specific init
+  if (screen === 'ar') initAR();
+  else stopAR();
+
+  if (screen === 'dashboard') initDashboard();
+  if (screen === 'vote') initVoteScreen();
+}
+
+function goToAR() {
+  document.getElementById('project-panel').classList.remove('open');
+  goTo('ar');
+}
+
+function goToVote() { goTo('vote'); }
+
+// ===== MAP =====
+function openPanel(idx) {
+  currentProject = idx;
+  const p = projects[idx];
+  document.getElementById('pp-tag').textContent = p.tag + ' · ' + p.status;
+  document.getElementById('pp-title').textContent = p.name;
+  document.getElementById('pp-desc').textContent = p.desc;
+  document.getElementById('pp-height').textContent = p.height;
+  document.getElementById('pp-floors').textContent = p.floors;
+  document.getElementById('pp-cost').textContent = p.cost;
+  document.getElementById('pp-votes').textContent = p.votes + ' votes';
+  document.getElementById('project-panel').classList.add('open');
+  document.getElementById('ar-project-name').textContent = p.name;
+  document.getElementById('height-tag').textContent = 'Height: ' + p.height;
+}
+
+// Close panel on map click
+document.querySelector('.map-container').addEventListener('click', function(e) {
+  if (!e.target.closest('.project-panel') && !e.target.closest('.project-pin')) {
+    document.getElementById('project-panel').classList.remove('open');
+  }
+});
+
+// ===== AR (Three.js) =====
+function initAR() {
+  if (arAnimId) return;
+  const canvas = document.getElementById('ar-canvas');
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+
+  arRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  arRenderer.setSize(w, h);
+  arRenderer.shadowMap.enabled = true;
+  arRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  arScene = new THREE.Scene();
+  arScene.background = new THREE.Color(0x0d1f12);
+  arScene.fog = new THREE.Fog(0x0d1f12, 80, 200);
+
+  arCamera = new THREE.PerspectiveCamera(60, w / h, 0.1, 500);
+  arCamera.position.set(20, 18, 35);
+  arCamera.lookAt(0, 8, 0);
+
+  // Ground
+  const groundGeo = new THREE.PlaneGeometry(200, 200, 40, 40);
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x0a1a0f, wireframe: false });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  arScene.add(ground);
+
+  // Grid
+  const gridHelper = new THREE.GridHelper(200, 40, 0x1a3020, 0x1a3020);
+  arScene.add(gridHelper);
+
+  // Surrounding buildings (context)
+  const contextBuildings = [
+    { x: -18, z: 5, w: 8, h: 12, d: 6 },
+    { x: -18, z: -8, w: 6, h: 8, d: 5 },
+    { x: 18, z: 8, w: 7, h: 10, d: 6 },
+    { x: 18, z: -6, w: 9, h: 15, d: 7 },
+    { x: 0, z: -18, w: 12, h: 6, d: 5 },
+    { x: -10, z: 16, w: 10, h: 9, d: 6 },
+    { x: 12, z: 16, w: 8, h: 7, d: 5 },
+  ];
+  contextBuildings.forEach(b => {
+    const geo = new THREE.BoxGeometry(b.w, b.h, b.d);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x0e1a11 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(b.x, b.h / 2, b.z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    arScene.add(mesh);
+
+    // Window pattern
+    const wGeo = new THREE.BoxGeometry(b.w + 0.1, b.h + 0.1, b.d + 0.1);
+    const wMat = new THREE.MeshBasicMaterial({ color: 0x1a2e1f, wireframe: true });
+    const wMesh = new THREE.Mesh(wGeo, wMat);
+    wMesh.position.set(b.x, b.h / 2, b.z);
+    arScene.add(wMesh);
+  });
+
+  // Main building
+  buildARBuilding();
+
+  // Sun light (directional)
+  const sunLight = new THREE.DirectionalLight(0xfff4e0, 1.2);
+  sunLight.position.set(30, 50, 20);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width = 1024;
+  sunLight.shadow.mapSize.height = 1024;
+  sunLight.shadow.camera.near = 0.5;
+  sunLight.shadow.camera.far = 200;
+  sunLight.shadow.camera.left = -60;
+  sunLight.shadow.camera.right = 60;
+  sunLight.shadow.camera.top = 60;
+  sunLight.shadow.camera.bottom = -60;
+  arScene.add(sunLight);
+  arScene.userData.sunLight = sunLight;
+
+  // Ambient
+  const ambient = new THREE.AmbientLight(0x0e2018, 0.8);
+  arScene.add(ambient);
+
+  // Trees (park)
+  for (let i = 0; i < 8; i++) {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2, 6), new THREE.MeshLambertMaterial({ color: 0x1a0a00 }));
+    const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 8), new THREE.MeshLambertMaterial({ color: 0x0a2a0a }));
+    const tx = -25 + Math.random() * 15, tz = -5 + Math.random() * 10;
+    trunk.position.set(tx, 1, tz);
+    canopy.position.set(tx, 3.5, tz);
+    trunk.castShadow = true;
+    canopy.castShadow = true;
+    arScene.add(trunk);
+    arScene.add(canopy);
+  }
+
+  // Camera orbit
+  let angle = 0;
+  function animate() {
+    arAnimId = requestAnimationFrame(animate);
+    angle += 0.003;
+    arCamera.position.x = Math.cos(angle) * 38;
+    arCamera.position.z = Math.sin(angle) * 38;
+    arCamera.position.y = 18 + Math.sin(angle * 0.5) * 3;
+    arCamera.lookAt(0, 10, 0);
+    arRenderer.render(arScene, arCamera);
+  }
+  animate();
+}
+
+function buildARBuilding() {
+  const p = projects[currentProject];
+  if (arBuilding) { arScene.remove(arBuilding); }
+
+  const group = new THREE.Group();
+  const floors = parseInt(p.floors) || 20;
+  const flH = 0.9;
+  const totalH = floors * flH;
+  const bW = 10, bD = 8;
+
+  // Main structure
+  const bGeo = new THREE.BoxGeometry(bW, totalH, bD);
+  const bMat = new THREE.MeshLambertMaterial({ color: p.color, transparent: true, opacity: 0.85 });
+  const bMesh = new THREE.Mesh(bGeo, bMat);
+  bMesh.position.y = totalH / 2;
+  bMesh.castShadow = true;
+  bMesh.receiveShadow = true;
+  group.add(bMesh);
+  group.userData.solidMesh = bMesh;
+  group.userData.solidMat = bMat;
+
+  // Wireframe outline
+  const wGeo = new THREE.BoxGeometry(bW + 0.2, totalH + 0.2, bD + 0.2);
+  const wMat = new THREE.MeshBasicMaterial({ color: p.color, wireframe: true, transparent: true, opacity: 0.3 });
+  const wMesh = new THREE.Mesh(wGeo, wMat);
+  wMesh.position.y = totalH / 2;
+  group.add(wMesh);
+  group.userData.wireMesh = wMesh;
+
+  // Floor lines
+  for (let f = 0; f <= floors; f++) {
+    const lineGeo = new THREE.BoxGeometry(bW + 0.1, 0.05, bD + 0.1);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 });
+    const line = new THREE.Mesh(lineGeo, lineMat);
+    line.position.y = f * flH;
+    group.add(line);
+  }
+
+  // Roof details
+  const roofGeo = new THREE.BoxGeometry(3, 4, 3);
+  const roofMat = new THREE.MeshLambertMaterial({ color: p.color });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.set(2, totalH + 2, 0);
+  roof.castShadow = true;
+  group.add(roof);
+
+  // Shadow plane (projected)
+  const shadowGeo = new THREE.PlaneGeometry(20, 40);
+  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+  const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
+  shadowPlane.rotation.x = -Math.PI / 2;
+  shadowPlane.position.set(-12, 0.05, 5);
+  shadowPlane.rotation.z = 0.3;
+  group.add(shadowPlane);
+  group.userData.shadowPlane = shadowPlane;
+
+  arScene.add(group);
+  arBuilding = group;
+}
+
+function stopAR() {
+  if (arAnimId) {
+    cancelAnimationFrame(arAnimId);
+    arAnimId = null;
+  }
+  if (arRenderer) {
+    arRenderer.dispose();
+    arRenderer = null;
+  }
+}
+
+function updateShadow(val) {
+  const hour = parseInt(val);
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const display = hour <= 12 ? hour : hour - 12;
+  document.getElementById('time-display').textContent = display + ':00 ' + suffix;
+
+  if (arScene && arScene.userData.sunLight) {
+    const t = (hour - 6) / 14;
+    const sun = arScene.userData.sunLight;
+    sun.position.x = Math.cos(t * Math.PI) * 60;
+    sun.position.y = Math.sin(t * Math.PI) * 60;
+    sun.position.z = (t - 0.5) * 40;
+    sun.intensity = 0.4 + Math.sin(t * Math.PI) * 1.2;
+  }
+
+  if (arBuilding) {
+    const t = (hour - 6) / 14;
+    const sp = arBuilding.userData.shadowPlane;
+    if (sp) {
+      sp.position.x = -15 + t * 20;
+      sp.position.z = -10 + t * 20;
+      sp.scale.x = 0.5 + t * 1.5;
+      sp.scale.y = 0.5 + (1 - t) * 1.5;
+    }
+  }
+}
+
+function toggleWireframe() {
+  isWireframe = true;
+  if (arBuilding) {
+    arBuilding.userData.solidMat.opacity = 0.15;
+    arBuilding.userData.wireMesh.material.opacity = 0.8;
+  }
+  document.getElementById('btn-wireframe').classList.add('active-btn');
+  document.getElementById('btn-solid').classList.remove('active-btn');
+}
+
+function toggleSolid() {
+  isWireframe = false;
+  if (arBuilding) {
+    arBuilding.userData.solidMat.opacity = 0.85;
+    arBuilding.userData.wireMesh.material.opacity = 0.3;
+  }
+  document.getElementById('btn-solid').classList.add('active-btn');
+  document.getElementById('btn-wireframe').classList.remove('active-btn');
+}
+
+function shareAR() {
+  showToast('🔗 Link copied! Share with citizens');
+}
+
+// ===== VOTE =====
+function initVoteScreen() {
+  const p = projects[currentProject];
+  document.getElementById('vote-project-title').textContent = p.name;
+  document.getElementById('vote-project-desc').textContent = p.desc;
+  const total = p.support + p.object + p.suggest;
+  const ps = Math.round(p.support / total * 100);
+  const po = Math.round(p.object / total * 100);
+  const pg = 100 - ps - po;
+  document.getElementById('pct-support').textContent = ps + '%';
+  document.getElementById('pct-object').textContent = po + '%';
+  document.getElementById('pct-suggest').textContent = pg + '%';
+  document.getElementById('bar-support').style.width = ps + '%';
+  document.getElementById('bar-object').style.width = po + '%';
+  document.getElementById('bar-suggest').style.width = pg + '%';
+  document.getElementById('vc-support').textContent = p.support;
+  document.getElementById('vc-object').textContent = p.object;
+  document.getElementById('vc-suggest').textContent = p.suggest;
+  selectedVote = null;
+  voteSubmitted = false;
+  document.querySelectorAll('.vote-option').forEach(o => o.className = 'vote-option');
+  document.getElementById('submit-vote-btn').disabled = true;
+  document.getElementById('submit-vote-btn').textContent = 'Select a vote option first';
+}
+
+function selectVote(type) {
+  selectedVote = type;
+  document.querySelectorAll('.vote-option').forEach(o => o.className = 'vote-option');
+  document.getElementById('opt-' + type).classList.add('selected-' + type);
+  document.getElementById('submit-vote-btn').disabled = false;
+  document.getElementById('submit-vote-btn').textContent = 'Submit Vote';
+}
+
+function submitVote() {
+  if (!selectedVote || voteSubmitted) return;
+  voteSubmitted = true;
+  const p = projects[currentProject];
+  p[selectedVote]++;
+  p.votes++;
+
+  const comment = document.getElementById('vote-comment').value.trim();
+  if (comment) {
+    const feed = document.getElementById('comment-feed');
+    const icons = { support: '✅', object: '❌', suggest: '💡' };
+    const item = document.createElement('div');
+    item.className = 'comment-item fade-in';
+    item.innerHTML = `<div class="ci-vote">${icons[selectedVote]}</div><div><div class="ci-text">${comment}</div><div class="ci-meta">You · just now</div></div>`;
+    feed.insertBefore(item, feed.firstChild);
+  }
+
+  document.getElementById('submit-vote-btn').textContent = '✅ Vote Submitted!';
+  document.getElementById('submit-vote-btn').disabled = true;
+  showToast('Vote recorded! Thank you for participating.');
+  initVoteScreen();
+  document.getElementById('submit-vote-btn').textContent = '✅ Vote Submitted!';
+  document.getElementById('submit-vote-btn').disabled = true;
+
+  // Update dashboard total
+  document.getElementById('dash-total').textContent = projects.reduce((a, p) => a + p.votes, 0);
+}
+
+// ===== DASHBOARD =====
+function initDashboard() {
+  const thinking = document.getElementById('ai-thinking');
+  const aiText = document.getElementById('ai-text');
+  thinking.style.display = 'flex';
+  aiText.classList.remove('visible');
+  aiText.textContent = '';
+
+  setTimeout(() => {
+    thinking.style.display = 'none';
+    typeWriter(aiText, aiInsights[currentProject], 0);
+  }, 1800);
+}
+
+function typeWriter(el, text, i) {
+  if (i === 0) el.classList.add('visible');
+  if (i < text.length) {
+    el.textContent = text.slice(0, i + 1);
+    setTimeout(() => typeWriter(el, text, i + 1), 12);
+  }
+}
+
+function selectDashProject(idx) {
+  currentProject = idx;
+  initDashboard();
+  document.querySelectorAll('.project-row').forEach((r, i) => {
+    r.style.borderColor = i === idx ? 'var(--green)' : 'var(--border)';
+  });
+  showToast('Loaded: ' + projects[idx].name);
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===== CITY SILHOUETTE ANIMATION =====
+function buildSilhouette() {
+  const container = document.getElementById('citySil');
+  const heights = [40,70,120,55,180,90,140,60,200,85,110,45,160,75,130,50,95,170,65,100,145,80,115,55,185,90,135,60,105,175];
+  heights.forEach((h, i) => {
+    const b = document.createElement('div');
+    b.className = 'building-sil';
+    b.style.cssText = `height:${h}px;width:${8 + Math.random()*16}px;animation-delay:${i*0.04}s`;
+    container.appendChild(b);
+  });
+}
+
+// ===== INIT =====
+buildSilhouette();
+goTo('landing');
+</script>
+</body>
+</html>

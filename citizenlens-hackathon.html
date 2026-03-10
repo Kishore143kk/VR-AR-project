@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CitizenLens — Hackathon Project Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0d;
+    --surface: #111812;
+    --surface2: #161e18;
+    --green: #00ff88;
+    --green-dim: #00ff8833;
+    --green-mid: #00cc6a;
+    --amber: #ffb700;
+    --amber-dim: #ffb70022;
+    --red: #ff4757;
+    --text: #e8f5ee;
+    --text-dim: #7a9988;
+    --border: #1e2d24;
+    --border-bright: #2a4035;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s ease;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid var(--green);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.15s ease;
+    opacity: 0.5;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orb */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 800px; height: 600px;
+    background: radial-gradient(ellipse, #00ff8811 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border-bright);
+    margin-bottom: 80px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(52px, 8vw, 96px);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -3px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  h1 span {
+    color: var(--green);
+    font-style: italic;
+    font-family: 'Instrument Serif', serif;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    margin-top: 20px;
+    max-width: 520px;
+    line-height: 1.8;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; }
+  .meta-value { font-size: 13px; color: var(--green); font-weight: 500; }
+
+  /* SECTION */
+  section { margin-bottom: 80px; }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-bright);
+  }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    letter-spacing: -0.5px;
+  }
+
+  /* PROBLEM CARD */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    margin-bottom: 2px;
+  }
+
+  .problem-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .problem-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--green);
+    transform: scaleY(0);
+    transition: transform 0.2s;
+    transform-origin: bottom;
+  }
+
+  .problem-card:hover::before { transform: scaleY(1); }
+  .problem-card:hover { border-color: var(--border-bright); background: var(--surface2); }
+
+  .problem-card.full { grid-column: 1 / -1; }
+
+  .card-tag {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .card-body {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* IDEA HERO */
+  .idea-hero {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 2px;
+  }
+
+  .idea-hero::after {
+    content: '01';
+    position: absolute;
+    right: 32px; top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Syne', sans-serif;
+    font-size: 160px;
+    font-weight: 800;
+    color: var(--green-dim);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .idea-tag {
+    display: inline-block;
+    background: var(--green);
+    color: var(--bg);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    margin-bottom: 16px;
+  }
+
+  .idea-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .idea-subtitle {
+    font-family: 'Instrument Serif', serif;
+    font-size: 18px;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+
+  /* TECH STACK */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+  }
+
+  .stack-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    transition: all 0.2s;
+  }
+
+  .stack-card:hover {
+    border-color: var(--amber);
+    background: var(--amber-dim);
+  }
+
+  .stack-layer {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stack-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .stack-detail {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* TIMELINE */
+  .timeline {
+    position: relative;
+    padding-left: 32px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--green), var(--border));
+  }
+
+  .tl-item {
+    position: relative;
+    margin-bottom: 32px;
+    padding: 20px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+
+  .tl-item:hover { border-color: var(--border-bright); }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -40px; top: 20px;
+    width: 10px; height: 10px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--green);
+  }
+
+  .tl-item::after {
+    content: '';
+    position: absolute;
+    left: -35px; top: 25px;
+    width: 36px; height: 1px;
+    background: var(--border-bright);
+  }
+
+  .tl-time {
+    font-size: 11px;
+    color: var(--green);
+    font-weight: 500;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .tl-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .tl-tasks {
+    list-style: none;
+  }
+
+  .tl-tasks li {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 3px 0;
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  .tl-tasks li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-size: 10px;
+  }
+
+  /* MVP FEATURES */
+  .feature-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+
+  .feature-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all 0.2s;
+  }
+
+  .feature-item:hover { border-color: var(--border-bright); }
+
+  .feature-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--green-dim);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 36px;
+  }
+
+  .feature-content {}
+  .feature-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .feature-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* ROLES */
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 20px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .role-card:hover { border-color: var(--green); }
+
+  .role-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .role-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--green);
+  }
+
+  .role-tasks {
+    list-style: none;
+    text-align: left;
+  }
+
+  .role-tasks li {
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 2px 0;
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 5px;
+    margin-top: 4px;
+  }
+
+  /* CODE BLOCK */
+  .code-block {
+    background: #050a07;
+    border: 1px solid var(--border-bright);
+    padding: 28px;
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+    position: relative;
+  }
+
+  .code-block::before {
+    content: 'project structure';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .code-green { color: var(--green); }
+  .code-amber { color: var(--amber); }
+  .code-dim { color: var(--text-dim); }
+  .code-red { color: var(--red); }
+  .code-white { color: var(--text); }
+
+  /* PITCH TIPS */
+  .pitch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px;
+  }
+
+  .pitch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: relative;
+  }
+
+  .pitch-card.highlight {
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .pitch-step {
+    font-size: 48px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    color: var(--green-dim);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .pitch-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .pitch-body {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* ALERT BOX */
+  .alert {
+    background: var(--amber-dim);
+    border: 1px solid var(--amber);
+    padding: 20px 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 32px;
+  }
+
+  .alert-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .alert-text { font-size: 12px; color: var(--text-dim); line-height: 1.8; }
+  .alert-text strong { color: var(--amber); display: block; margin-bottom: 4px; font-size: 13px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border-bright);
+    padding: 40px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .footer-brand {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--green);
+    letter-spacing: -0.5px;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate { animation: fadeUp 0.6s ease forwards; opacity: 0; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+  .delay-5 { animation-delay: 0.5s; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  @media (max-width: 768px) {
+    .problem-grid, .stack-grid, .feature-list, .pitch-grid { grid-template-columns: 1fr; }
+    .role-grid { grid-template-columns: 1fr 1fr; }
+    .problem-card.full { grid-column: 1; }
+    h1 { font-size: 48px; }
+    .idea-hero::after { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header class="animate">
+    <div class="badge"><span class="badge-dot"></span> Hackathon Project Plan · No Headset Required</div>
+    <h1>Citizen<span>Lens</span></h1>
+    <p class="subtitle">Mobile AR + WebXR platform that lets citizens spatially experience urban planning decisions before construction begins — no VR headset needed.</p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <span class="meta-label">Domain</span>
+        <span class="meta-value">Urban Planning & Infrastructure</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Platform</span>
+        <span class="meta-value">Mobile AR + Web Browser</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Duration</span>
+        <span class="meta-value">48 Hours</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">XR Method</span>
+        <span class="meta-value">WebXR / Three.js / 8th Wall</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- PROBLEM -->
+  <section class="animate delay-1">
+    <div class="section-label">01 — The Problem</div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="card-tag">Pain Point #1</div>
+        <div class="card-title">Zero Spatial Empathy</div>
+        <div class="card-body">City councils approve buildings from 2D blueprints. Residents can't visualize scale, shadow, or street-level impact until construction is already done.</div>
+      </div>
+      <div class="problem-card">
+        <div class="card-tag">Pain Point #2</div>
+        <div class="card-title">Late-Stage Protests</div>
+        <div class="card-body">Community backlash only happens after approvals. Objections that could have shaped design are raised too late — costing time, money, and trust.</div>
+      </div>
+      <div class="problem-card full">
+        <div class="card-tag">The Gap We Fill</div>
+        <div class="card-title">No tool lets ordinary citizens walk around a proposed building in the real world, on their own phone, before a single brick is laid.</div>
+        <div class="card-body" style="margin-top:8px;">CitizenLens bridges spatial understanding and civic participation — using mobile AR, anyone can point their phone at an empty plot and see the future, life-size.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADAPTED PLAN -->
+  <section class="animate delay-2">
+    <div class="section-label">02 — No-Headset Adaptation</div>
+
+    <div class="alert">
+      <div class="alert-icon">⚡</div>
+      <div class="alert-text">
+        <strong>Plan Adapted: VR → Mobile AR + WebXR</strong>
+        Since your team has no VR headset, we're switching to a phone-first AR approach using WebXR and Three.js — which actually has a BIGGER demo advantage: judges can try it on their own phones instantly, no hardware needed.
+      </div>
+    </div>
+
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="card-tag">❌ Original (VR Headset)</div>
+        <div class="card-title">Meta Quest / PC VR</div>
+        <div class="card-body">Required hardware, limited to team's device, difficult for judges to try, complex setup time during demo.</div>
+      </div>
+      <div class="problem-card" style="border-color: var(--green);">
+        <div class="card-tag" style="color: var(--green);">✅ New Plan (Mobile AR)</div>
+        <div class="card-title">Phone + Browser = Everyone Can Demo</div>
+        <div class="card-body">Works on any modern smartphone. Judges scan a QR code and instantly walk around your AR building. No installs, no hardware barriers.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT YOU BUILD -->
+  <section class="animate delay-2">
+    <div class="section-label">03 — What You Build (MVP)</div>
+
+    <div class="idea-hero">
+      <div class="idea-tag">★ Core Product</div>
+      <div class="idea-title">CitizenLens AR Visualizer</div>
+      <div class="idea-subtitle">"Point. See. Decide."</div>
+      <div class="card-body" style="max-width: 520px;">A mobile web app where users tap a real-world location on a map, then point their phone camera at that spot to see a 3D building model placed there at real-world scale — with shadow simulation, height indicators, and a community vote button.</div>
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-num">01</div>
+        <div class="feature-content">
+          <div class="feature-title">Map-Based Plot Selector</div>
+          <div class="feature-desc">User opens the web app, sees a Mapbox map with pre-loaded "proposed project" pins. Tap a pin to select the building to visualize.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-num">02</div>
+        <div class="feature-content">
+          <div class="feature-title">Mobile AR Placement</div>
+          <div class="feature-desc">After selecting, the app switches to camera mode. Using WebXR + device sensors, the 3D model is placed on the ground at the correct GPS location and scale.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-num">03</div>
+        <div class="feature-content">
+          <div class="feature-title">Shadow Simulation Slider</div>
+          <div class="feature-desc">A time-of-day slider shows how the building's shadow falls across the neighborhood at 8AM, 12PM, and 5PM using Three.js directional light simulation.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-num">04</div>
+        <div class="feature-content">
+          <div class="feature-title">Citizen Vote + Comment</div>
+          <div class="feature-desc">While in AR view, a floating UI lets citizens tap "Support", "Object", or "Suggest Change" — pinned to that exact AR location with a counter display.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-num">05</div>
+        <div class="feature-content">
+          <div class="feature-title">Admin Dashboard (Web)</div>
+          <div class="feature-desc">A simple web dashboard shows planners a heatmap of citizen reactions overlaid on the city map, with a breakdown of votes per project.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-num">06</div>
+        <div class="feature-content">
+          <div class="feature-title">QR Code Share</div>
+          <div class="feature-desc">Each project generates a shareable QR code so citizens can be directed to the exact AR experience — perfect for the demo moment with judges.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section class="animate delay-3">
+    <div class="section-label">04 — Tech Stack (No Headset)</div>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <div class="stack-layer">XR / 3D Layer</div>
+        <div class="stack-name">Three.js + WebXR</div>
+        <div class="stack-detail">Render 3D building models in browser. WebXR API handles phone camera AR. Works on Android Chrome natively. iOS via WebXR Viewer app.</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-layer">Alternative XR</div>
+        <div class="stack-name">8th Wall (Free Trial)</div>
+        <div class="stack-detail">If WebXR proves tricky, 8th Wall provides instant cross-platform AR with surface detection. Free 14-day trial — perfect for a hackathon.</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-layer">3D Models</div>
+        <div class="stack-name">glTF + Sketchfab</div>
+        <div class="stack-detail">Download free building models from Sketchfab or Poly Pizza in glTF format. Three.js loads these natively. No 3D modeling needed.</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-layer">Maps</div>
+        <div class="stack-name">Mapbox GL JS</div>
+        <div class="stack-detail">Free tier. 3D terrain, building footprint data, and GPS coordinate picking built-in. Drop a pin → get real-world coordinates for AR anchor.</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-layer">Backend / DB</div>
+        <div class="stack-name">Firebase / Supabase</div>
+        <div class="stack-detail">Store citizen votes and comments in real-time. Free tier sufficient. No backend code needed — direct SDK from frontend.</div>
+      </div>
+      <div class="stack-card">
+        <div class="stack-layer">AI Layer</div>
+        <div class="stack-name">Claude API</div>
+        <div class="stack-detail">Summarize citizen feedback clusters into actionable planning insights. "Citizens near Block C mostly object due to shadow impact on the park."</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECT STRUCTURE -->
+  <section class="animate delay-3">
+    <div class="section-label">05 — Project Structure</div>
+    <div class="code-block">
+<span class="code-green">citizenlens/</span>
+├── <span class="code-amber">public/</span>
+│   ├── <span class="code-white">index.html</span>          <span class="code-dim"># Entry point, loads WebXR & Three.js</span>
+│   └── <span class="code-white">models/</span>             <span class="code-dim"># glTF building models go here</span>
+│       ├── <span class="code-white">apartment_block.glb</span>
+│       └── <span class="code-white">commercial_tower.glb</span>
+├── <span class="code-amber">src/</span>
+│   ├── <span class="code-green">ar/</span>
+│   │   ├── <span class="code-white">ARScene.js</span>          <span class="code-dim"># Three.js scene + WebXR session</span>
+│   │   ├── <span class="code-white">ModelLoader.js</span>      <span class="code-dim"># Load & place glTF at GPS coords</span>
+│   │   └── <span class="code-white">ShadowSim.js</span>        <span class="code-dim"># Time-of-day directional light</span>
+│   ├── <span class="code-green">map/</span>
+│   │   ├── <span class="code-white">MapView.js</span>          <span class="code-dim"># Mapbox GL JS, pin selector</span>
+│   │   └── <span class="code-white">ProjectPins.js</span>      <span class="code-dim"># Pre-loaded project data</span>
+│   ├── <span class="code-green">ui/</span>
+│   │   ├── <span class="code-white">VotePanel.js</span>        <span class="code-dim"># AR overlay: Support / Object / Suggest</span>
+│   │   └── <span class="code-white">Dashboard.js</span>        <span class="code-dim"># Admin heatmap view</span>
+│   ├── <span class="code-green">ai/</span>
+│   │   └── <span class="code-white">FeedbackSummary.js</span>  <span class="code-dim"># Claude API: summarize vote clusters</span>
+│   └── <span class="code-amber">firebase.js</span>             <span class="code-dim"># DB config for votes & comments</span>
+├── <span class="code-white">package.json</span>
+└── <span class="code-red">README.md</span>                   <span class="code-dim"># Setup instructions for judges</span>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section class="animate delay-3">
+    <div class="section-label">06 — 48-Hour Build Timeline</div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-time">Hour 0 – 3 · Setup Sprint</div>
+        <div class="tl-title">Foundations & Repo</div>
+        <ul class="tl-tasks">
+          <li>Initialize Vite + Three.js project, deploy to Vercel</li>
+          <li>Set up Firebase project, configure Mapbox API key</li>
+          <li>Download 2–3 glTF building models from Sketchfab</li>
+          <li>Lock on tech: WebXR native vs 8th Wall (test both, pick one)</li>
+        </ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hour 3 – 12 · Core XR Build</div>
+        <div class="tl-title">AR Scene Working</div>
+        <ul class="tl-tasks">
+          <li>Get WebXR camera session running in mobile browser</li>
+          <li>Load glTF model, place it on detected ground plane</li>
+          <li>Connect Mapbox pin → pass GPS coordinates to AR scene</li>
+          <li>Basic hit-testing: model sticks to real floor surface</li>
+        </ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hour 12 – 24 · Feature Layer</div>
+        <div class="tl-title">Shadow Sim + Voting UI</div>
+        <ul class="tl-tasks">
+          <li>Implement directional light with time-of-day slider</li>
+          <li>Build floating AR overlay panel: vote buttons</li>
+          <li>Wire vote button → Firebase write → live counter update</li>
+          <li>Admin dashboard page: read vote data, show summary</li>
+        </ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hour 24 – 36 · AI + Polish</div>
+        <div class="tl-title">Intelligence & UX</div>
+        <ul class="tl-tasks">
+          <li>Integrate Claude API: summarize vote comments into insights</li>
+          <li>Polish mobile UI: touch controls for model scale/rotate</li>
+          <li>Add QR code generator for each project URL</li>
+          <li>Test on multiple phones — Android + iOS</li>
+        </ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hour 36 – 44 · Demo Prep</div>
+        <div class="tl-title">Rehearse & Harden</div>
+        <ul class="tl-tasks">
+          <li>Fix critical bugs only — freeze feature scope</li>
+          <li>Load a real local landmark as the "proposed site"</li>
+          <li>Rehearse 3-min live demo: map → AR → vote → AI insight</li>
+          <li>Prepare offline fallback (pre-recorded video backup)</li>
+        </ul>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">Hour 44 – 48 · Pitch</div>
+        <div class="tl-title">Present & Win</div>
+        <ul class="tl-tasks">
+          <li>5-slide deck: Problem → Solution → Demo → Impact → Ask</li>
+          <li>Hand judges the QR code before you start talking</li>
+          <li>Show AI feedback summary live on the dashboard</li>
+          <li>Close with: "This city. This plot. This building. Right now."</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM ROLES -->
+  <section class="animate delay-4">
+    <div class="section-label">07 — Team Roles</div>
+    <div class="role-grid">
+      <div class="role-card">
+        <div class="role-icon">🥽</div>
+        <div class="role-title">XR Dev #1</div>
+        <ul class="role-tasks">
+          <li>Three.js AR scene setup</li>
+          <li>WebXR session handling</li>
+          <li>glTF model loading</li>
+          <li>Ground plane detection</li>
+        </ul>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🌍</div>
+        <div class="role-title">XR Dev #2</div>
+        <ul class="role-tasks">
+          <li>Shadow simulation</li>
+          <li>GPS → AR coordinate math</li>
+          <li>Mapbox integration</li>
+          <li>Mobile touch controls</li>
+        </ul>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">⚡</div>
+        <div class="role-title">Full-stack / AI</div>
+        <ul class="role-tasks">
+          <li>Firebase setup & votes</li>
+          <li>Claude API integration</li>
+          <li>Admin dashboard UI</li>
+          <li>QR code generator</li>
+        </ul>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🎨</div>
+        <div class="role-title">Design / Pitch</div>
+        <ul class="role-tasks">
+          <li>AR overlay UI design</li>
+          <li>Pitch deck creation</li>
+          <li>Demo script writing</li>
+          <li>3D model sourcing</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PITCH STRATEGY -->
+  <section class="animate delay-4">
+    <div class="section-label">08 — Winning Pitch Strategy</div>
+    <div class="pitch-grid">
+      <div class="pitch-card">
+        <div class="pitch-step">1</div>
+        <div class="pitch-title">Hand Out QR First</div>
+        <div class="pitch-body">Before you say a word, show judges the QR code. Let them scan and open the app on their phones. They're already in your demo before your pitch begins.</div>
+      </div>
+      <div class="pitch-card highlight">
+        <div class="pitch-step">2</div>
+        <div class="pitch-title">Live AR Demo</div>
+        <div class="pitch-body">Point your phone at the floor of the presentation room. The proposed building appears. Walk around it. Show the shadow slider. Judges physically experience the problem vanishing.</div>
+      </div>
+      <div class="pitch-card">
+        <div class="pitch-step">3</div>
+        <div class="pitch-title">AI Insight Closer</div>
+        <div class="pitch-body">Switch to the dashboard. Show pre-seeded votes. Let Claude's AI summary appear live: "Residents near the north side strongly object due to park shadow." That's the future of civic planning.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-brand">CitizenLens</div>
+    <div>Applied AI × XR Hackathon · Urban Planning Track · No Headset Required</div>
+    <div style="color: var(--green);">Mobile AR + WebXR + Claude AI</div>
+  </footer>
+
+</div>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx - 6 + 'px';
+    cursor.style.top = my - 6 + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx - 18 + 'px';
+    ring.style.top = ry - 18 + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button, .problem-card, .stack-card, .feature-item, .role-card, .pitch-card, .tl-item').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.transform = 'scale(2)';
+      ring.style.transform = 'scale(1.5)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.transform = 'scale(1)';
+      ring.style.transform = 'scale(1)';
+    });
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('section').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
